@@ -1,0 +1,103 @@
+service: marketplace-api
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: dev
+  region: us-west-2
+  environment:
+    DYNAMODB_TABLE_NAME: ${self:custom.storesTableName}
+
+  custom:
+    storesTableName: stores-table-${self:provider.stage}
+
+  plugins: 
+    - serverless-iam-roles-per-function
+
+  functions:
+    getStore:
+      handler: api.getStore
+      name: get-store
+      memorySize: 128
+      timeout: 5
+      events:
+        - http:
+            path: store/{storeId}
+            method: GET
+      iamRoleStatements:
+        - Effect: Allow
+          Action:
+            - "dynamodb:GetItem"
+            Resource: !GetAtt StoresTable.Arn
+    createStore:
+      handler: api.createStore
+      name: create-store
+      memorySize: 128
+      timeout: 5
+      events:
+        - http:
+            path: post
+            method: POST
+      iamRoleStatements:
+        - Effect: "Allow"
+          Action: 
+            - "dynamodb:PutItem"
+          Resource: !GetAtt StoresTable.Arn
+    updateStore:
+      handler: api.updateStore
+      name: update-store
+      memorySize: 128
+      timeout: 5
+      events:
+        - http:
+            path: store/{storeId}
+            method: PUT
+      iamRoleStatements:
+        - Effect: "Allow"
+          Action: 
+            - "dynamodb:UpdateItem"
+          Resource: !GetAtt StoresTable.Arn
+    deleteStore:
+      handler: api.deleteStore
+      name: delete-store
+      memorySize: 128
+      timeout: 5
+      events: 
+        - http:
+            path: store/{storeId}
+            method: DELETE
+      iamRoleStatements:
+        - Effect: "Allow"
+          Action: 
+            - "dynamodb:DeleteItem"
+          Resource: !GetAtt StoresTable.Arn
+    getAllStores:
+      handler: api.getAllStores
+      name: get-all-stores
+      memorySize: 128
+      timeout: 5
+      events: 
+        - http:
+            path: stores
+            method: GET
+      iamRoleStatements:
+        - Effect: "Allow"
+          Action: 
+            - "dynamodb:Scan"
+          Resource: !GetAtt PostsTable.Arn
+
+  resources:
+    Resources:
+      StoresTable:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          TableName: ${self:custom.storesTableName}
+          AttributeDefinitions:
+            - AttributeName: storeId
+              AttributeType: S
+          KeySchema:
+            - AttributeName: storeId
+              KeyType: HASH
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
